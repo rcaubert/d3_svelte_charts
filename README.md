@@ -1,3 +1,15 @@
+# d3 charts Library made with Svelte
+Created with Tom Fevrier
+
+## Charts available:
+
+- Line chart
+- Bar chart
+- Scatter Plot
+- Bar Chart Race
+
+---
+
 *Psst — looking for a shareable component template? Go here --> [sveltejs/component-template](https://github.com/sveltejs/component-template)*
 
 ---
