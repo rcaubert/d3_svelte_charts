@@ -1,53 +1,54 @@
 <script>
-    export let xScale;
-    export let yScale;
-    export let data;
-    export let x;
-    export let y;
-    export let animate;
-    export let duration = 1000;
+	import { beforeUpdate } from 'svelte';
+	import { line } from 'd3-shape';
+	import { select, selectAll } from 'd3-selection';
+	import { transition } from 'd3-transition';
 
-    import { onMount } from 'svelte';
-    import { line } from 'd3-shape';
-    import { select, selectAll } from 'd3-selection';
-    import { transition } from 'd3-transition';
+	export let data;
+	export let x;
+	export let xScale;
+	export let y;
+	export let yScale;
+	export let animate;
+	export let duration;
 
-    let g;
+	let g;
 
-    //Les composants
+	beforeUpdate(() => {
+		if (!g || !xScale || !yScale) return;
+		//redraw all for responsivity
+		select(g).selectAll('*').remove();
 
-    // <g> est une sorte de groupe de divs
-    // <circle> a les parametres cx cy et r
-    // <rect> avec param x y width height
-    // <line> utilise par les axes
-    // <path> : parametre ultra flexible en svg, seul param qui est d qui represente le chemin suivi. Tu lui donnes le point de depart puis des sortes de coordonnees. MO,O M, 10, 10 veut dire tu commences a 00 et tu vas à 10 10 en droite. Mais d3 a plein de fonctions pour generer cett longue chaine d a ta place (voir github d3-shape)
+		const lineGenerator = line()
+			.x(d => xScale(d[x]))
+			.y(d => yScale(d[y]));
 
-    onMount(() => {
-        const lineGenerator = line()
-            .x(d => xScale(d[x]))
-            .y(d => yScale(d[y]));
+		let path = select(g).append('path');
 
-        let path = select(g).append('path');
+		path.datum(data)
+			.attr('d', lineGenerator)
+			.attr('fill', 'none')
+			.attr('stroke', 'rebeccapurple')
+			.attr('stroke-width', 2)
+			.attr('stroke-linecap', 'round');
 
-        path.datum(data) //datum pour data au singulier
-            .attr('d', lineGenerator)
-            .attr('fill', 'none')
-            .attr('stroke', 'rebeccapurple')
-            .attr('stroke-width', 5) //epaisseur du trait, style css
-            .attr('stroke-linecap', 'round')//arrondit les angles début et fin
+		if (animate) {
+			path = path
+				.attr('stroke-dasharray', path.node().getTotalLength())
+				.attr('stroke-dashoffset', path.node().getTotalLength())
+				
+			let onScroll;
+			window.addEventListener('scroll', onScroll = () => {
+				if (window.scrollY > g.parentNode.getBoundingClientRect().top) {
+						path.transition()
+						.duration(duration)
+							.attr('stroke-dashoffset', 0);
 
-            if (animate)
-            {
-                path
-                    .attr('stroke-dasharray', path.node().getTotalLength())
-                    .attr('stroke-dashoffset', path.node().getTotalLength())
-                    .transition()
-                    .duration(5000)
-                    .attr('stroke-dashoffset', 0)
-                    //tu mets dasharray a la longueur de ton chemin et tu fais varier l'offset de la longueur de ton chemin a 0.
-            }
-    });
+					window.removeEventListener('scroll', onScroll);
+				}
+			});
+		}
+	});
 </script>
 
-
-<g bind:this={g}></g>
+<g bind:this={g} class="line-chart"></g>

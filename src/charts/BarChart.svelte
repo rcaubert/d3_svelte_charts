@@ -1,46 +1,98 @@
 <script>
-    export let scale;
-    export let labels;
-    export let data;
-    export let key;
-    export let value;
-    export let animate;
-    export let duration;
-    export let barOrientation;
-    export let sortBars;
+	import { onMount } from 'svelte';
+	import { max } from 'd3-array';
+	import { scaleBand, scaleLinear } from 'd3-scale';
 
-    import { onMount } from 'svelte';
-    import { select, selectAll } from 'd3-selection';
-    import { scaleOrdinal } from 'd3-scale';
-    //scale sqrt pour square root : quand tu doubles la valeur tu multiplies par la racine carree au lieu de mult par 4
-    import { transition } from 'd3-transition';
+	import Axis from '../components/Axis.svelte';
+	import Grid from '../components/Grid.svelte';
+	import SimpleBarChart from './SimpleBarChart.svelte';
 
-    let g;
+	// General props
+	export let type;
+	export let data;
 
-    onMount(() => {
-        if (sortBars)
-            data = data.sort((a, b) => b[value] - a[value]);
-        let bars = select(g).selectAll('rect') //rect pour rectangle
-            .data(data).enter()
-            .append('rect') //4 parametres : xy (coordonnees en haut a gauche), width, height
-                .attr('x', d => barOrientation === 'vertical' ? labels(d[key]) : scale(0))
-                .attr('y', d => barOrientation === 'vertical' ? scale(d[value]) : labels(d[key]))
-                .attr('width', barOrientation === 'vertical' ? labels.bandwidth() : d => scale(d[value]) - scale(0))
-                .attr('height', barOrientation === 'vertical' ? d => scale(0) - scale(d[value]) : labels.bandwidth()) //distance entre bas de l'axe et le haut de ta barre. Contre intuitif, car c'est inversé
-                .attr('fill', 'rebeccapurple');
+	// Layout props
+	export let height;
+	export let margin;
 
-    //    if (animate) {
-    //        circle = circle
-    //            .attr('r', 0) // tu lui donnes la taille de 0 puis il grandit jusqua //la taille souhaitee
-    //            .transition()
-    //            .duration(duration);
-    //    }
-    //    circle.attr('r', typeof r === 'string'
-    //        ? d => radiusScale(d[r])
-    //        : r
-    //    );
-    });
+	export let key;
+	export let value;
+	export let barOrientation;
+	export let sortBars;
+	export let grid;
+
+	// Props for animation
+	export let animate;
+	export let duration;
+
+	//Props for tooltips
+	export let tooltipRef;
+	export let tooltipTemplate;
+
+	if (sortBars)
+		data = data.sort((a, b) => b[value] - a[value]);
+
+	let svg;
+	let width;
+
+	let labels = scaleBand()
+		.domain(data.map(e => e[key]))
+		.paddingInner(0.1);
+
+	let scale = scaleLinear()
+		.domain([0, max(data, d => d[value])]);
+
+
+	const getWidth = () => {
+		return svg.parentNode.getBoundingClientRect().width;
+	}
+
+	const setScaleRanges = () => {
+		labels = labels.range(barOrientation === 'vertical'
+					? [margin, width - margin]
+					: [margin, height - margin])
+		scale = scale.range(barOrientation === 'vertical'
+					? [height - margin, margin]
+					: [margin, width - margin]);
+	}
+
+	//responsivity
+	onMount(() => {
+		let timeout;
+		window.addEventListener('resize', () => {
+			clearTimeout(timeout);
+			timeout = setTimeout(() => {
+				width = getWidth();
+				setScaleRanges();
+			}, 50);
+		});
+
+	width = getWidth();
+	setScaleRanges();
+	})
 </script>
 
-
-<g bind:this={g}></g>
+<svg bind:this={svg} {width} {height} class="chart">
+	{#if type === 'BarChart'}
+		{#if grid}
+			<Grid
+				{width} {height} {margin}
+				scale={scale}
+				direction="{barOrientation === 'vertical' ? 'horizontal' : 'vertical'}" />
+		{/if}
+		<Axis
+			{width} {height} {margin} scale={labels}
+			orient="{barOrientation === 'vertical' ? 'bottom' : 'left'}"
+			hideArrow hideTicks />
+		<Axis
+			{width} {height} {margin} scale={scale}
+			orient="{barOrientation === 'vertical' ? 'left' : 'bottom'}" />
+		<SimpleBarChart
+			{data}
+			{key} {labels}
+			{value} {scale}
+			{barOrientation}
+			{animate} {duration}
+			{tooltipRef} {tooltipTemplate} />
+	{/if}
+</svg>
