@@ -1,4 +1,4 @@
-# d3 charts Library made with Svelte
+# d3 charts library made with Svelte
 Created with Tom Fevrier
 
 ## Charts available:
